@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Smart Waste Classification</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f2f5f7;
+            color: #222;
+        }
+
+        header {
+            background: #17202a;
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        header p {
+            margin: 8px 0 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 25px auto;
+            padding: 15px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow:
+                0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            margin-top: 0;
+        }
+
+        .value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        #wasteImage {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 12px;
+            background: #eee;
+        }
+
+        .status {
+            font-weight: bold;
+        }
+
+        .left {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .right {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .wait {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>♻️ Smart Waste Classification System</h1>
+
+    <p>
+        ESP32-CAM + Flask + MobileNetV3-Small
+    </p>
+
+</header>
+
+
+<div class="container">
+
+    <div class="grid">
+
+        <!-- IMAGE -->
+
+        <div class="card">
+
+            <h2>📷 Latest Image</h2>
+
+            <img
+                id="wasteImage"
+                src=""
+                alt="Waiting for image..."
+            >
+
+        </div>
+
+
+        <!-- CLASSIFICATION -->
+
+        <div class="card">
+
+            <h2>🤖 Classification</h2>
+
+            <div
+                class="value"
+                id="classification"
+            >
+                Waiting
+            </div>
+
+            <p>
+                Confidence:
+                <strong id="confidence">
+                    0
+                </strong>%
+            </p>
+
+            <p>
+                Raw Class:
+                <strong id="rawClass">
+                    -
+                </strong>
+            </p>
+
+        </div>
+
+
+        <!-- SORTING -->
+
+        <div class="card">
+
+            <h2>⚙️ Sorting Direction</h2>
+
+            <div
+                id="sortCommand"
+                class="wait"
+            >
+                WAIT
+            </div>
+
+            <p id="sortingText">
+                Waiting for classification
+            </p>
+
+        </div>
+
+
+        <!-- SYSTEM -->
+
+        <div class="card">
+
+            <h2>🖥️ System Status</h2>
+
+            <p>
+                Flask:
+                <span
+                    id="serverStatus"
+                    class="status"
+                >
+                    Checking...
+                </span>
+            </p>
+
+            <p>
+                Classifier:
+                <span
+                    id="yoloStatus"
+                    class="status"
+                >
+                    Checking...
+                </span>
+            </p>
+
+            <p>
+                Model:
+                <strong>
+                    MobileNetV3-Small
+                </strong>
+            </p>
+
+            <p>
+                Input:
+                <strong>
+                    224 × 224
+                </strong>
+            </p>
+
+        </div>
+
+
+        <!-- TIME -->
+
+        <div class="card">
+
+            <h2>🕒 Last Detection</h2>
+
+            <div id="timestamp">
+                -
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="footer">
+
+        Smart Waste Classification IoT Project
+
+    </div>
+
+</div>
+
+
+<script>
+
+let lastImage = "";
+
+
+async function updateDashboard() {
+
+    try {
+
+        const response =
+            await fetch("/latest");
+
+        const data =
+            await response.json();
+
+
+        // Classification
+
+        document.getElementById(
+            "classification"
+        ).innerText =
+            data.classification || "Waiting";
+
+
+        // Confidence
+
+        document.getElementById(
+            "confidence"
+        ).innerText =
+            data.confidence || 0;
+
+
+        // Raw class
+
+        document.getElementById(
+            "rawClass"
+        ).innerText =
+            data.raw_class || "-";
+
+
+        // Timestamp
+
+        document.getElementById(
+            "timestamp"
+        ).innerText =
+            data.timestamp || "-";
+
+
+        // Sort command
+
+        const command =
+            data.sort_command || "WAIT";
+
+        const sortElement =
+            document.getElementById(
+                "sortCommand"
+            );
+
+        sortElement.innerText =
+            command;
+
+        sortElement.className = "";
+
+
+        if (command === "LEFT") {
+
+            sortElement.className = "left";
+
+            document.getElementById(
+                "sortingText"
+            ).innerText =
+                "♻️ Biodegradable → LEFT";
+
+        }
+
+        else if (command === "RIGHT") {
+
+            sortElement.className = "right";
+
+            document.getElementById(
+                "sortingText"
+            ).innerText =
+                "🗑️ Non-Biodegradable → RIGHT";
+
+        }
+
+        else {
+
+            sortElement.className = "wait";
+
+            document.getElementById(
+                "sortingText"
+            ).innerText =
+                "Waiting for classification";
+
+        }
+
+
+        // Image
+
+        if (
+            data.image &&
+            data.image !== lastImage
+        ) {
+
+            lastImage = data.image;
+
+            document.getElementById(
+                "wasteImage"
+            ).src =
+                "/images/" +
+                encodeURIComponent(data.image) +
+                "?t=" +
+                Date.now();
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.log(
+            "Dashboard error:",
+            error
+        );
+
+    }
+
+}
+
+
+async function updateHealth() {
+
+    try {
+
+        const response =
+            await fetch("/health");
+
+        const data =
+            await response.json();
+
+
+        document.getElementById(
+            "serverStatus"
+        ).innerText =
+            data.status;
+
+
+        document.getElementById(
+            "yoloStatus"
+        ).innerText =
+            data.yolo;
+
+    }
+
+    catch (error) {
+
+        document.getElementById(
+            "serverStatus"
+        ).innerText =
+            "OFFLINE";
+
+        document.getElementById(
+            "yoloStatus"
+        ).innerText =
+            "OFFLINE";
+
+    }
+
+}
+
+
+setInterval(
+    updateDashboard,
+    1000
+);
+
+
+setInterval(
+    updateHealth,
+    5000
+);
+
+
+updateDashboard();
+updateHealth();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+    "status": "waiting",
+    "classification": "Waiting",
+    "raw_class": "",
+    "confidence": 0.0,
+    "image": null,
+    "timestamp": null,
+    "sort_command": "WAIT",
+    "capture_id": null,
+    "sort_id": null,
+    "model": "MobileNetV3-Small",
+    "input_size": "224x224"
+}
